@@ -1,4 +1,6 @@
 import pygame
+import sys
+import os
 class Board:
     def __init__(self, width, height):
         self.width = width
@@ -59,7 +61,17 @@ class Hero:
         self.top = 250
         self.cell_size = 60
         # героя на норм картинку поменяем позже
-        self.hero = [[self.left + 120, self.top + 120], [60, 120]]
+        self.hero = [[self.left, self.top + 120], [60, 120]]
+        self.animation = {'up': ['up-walk-2.png', 'up-stand.png', 'up-walk-1.png', 'up-stand.png'],
+                          'down': ['down-walk-2.png', 'down-stand.png', 'down-walk-1.png', 'down-stand.png'],
+                          'left': ['left-walk-2.png', 'left-stand.png', 'left-walk-1.png', 'left-stand.png'],
+                          'right': ['right-walk-2.png', 'right-stand.png', 'right-walk-1.png', 'right-stand.png']}
+        self.direction = 'down'
+        self.up = 1
+        self.down = 1
+        self.toleft = 1
+        self.right = 1
+        self.IMPORT_COORDS = [self.left, self.top, self.left + self.cell_size, self.top + 2 * self.cell_size] #коробка, кровать, стол
 
     def get_rect(self, x, y):
         one = (x - self.top) // self.cell_size
@@ -67,26 +79,82 @@ class Hero:
         return one, sec
 
     def drawing(self):
-        pygame.draw.rect(screen, pygame.Color(0, 255, 255), (self.hero[0][0], self.hero[0][1],
-                            self.hero[1][0], self.hero[1][1]))
+        sprite.image = load_image(self.animation[self.direction][1])
+        all_sprites.draw(screen)
 
-    def moving(self, click):
-        if click == 'w' and self.hero[0][1] >= self.top - 60:
-            self.hero[0][1] -= 10
-        elif click == 'a' and self.hero[0][0] >= self.left + 10:
-            self.hero[0][0] -= 10
-        elif click == 's' and self.hero[0][1] <= self.top + self.cell_size * 4 - 10:
-            self.hero[0][1] += 10
-        elif click == 'd' and self.hero[0][0] <= self.left + self.cell_size * 7 - 10:
-            self.hero[0][0] += 10
+    def moving_up(self, x, y):
+        self.direction = 'up'
+        sprite.image = load_image(self.animation['up'][self.up])
+        if self.up == 3:
+            self.up = 0
+        else:
+            self.up += 1
+        if y - 5 > self.top - 110:
+            return [x, y - 5]
+        return [x, y]
+
+    def moving_down(self, x, y):
+        self.direction = 'down'
+        sprite.image = load_image(self.animation['down'][self.down])
+        if self.down == 3:
+            self.down = 0
+        else:
+            self.down += 1
+        if y <= self.left + self.cell_size * 8 - 10:
+            return [x, y + 5]
+        return [x, y]
+
+    def moving_left(self, x, y):
+        self.direction = 'left'
+        sprite.image = load_image(self.animation['left'][self.toleft])
+        if self.toleft == 3:
+            self.toleft = 0
+        else:
+            self.toleft += 1
+        if x - 5 > self.left:
+            return [x - 5, y]
+        return [x, y]
+
+    def moving_right(self, x, y):
+        self.direction = 'right'
+        sprite.image = load_image(self.animation['right'][self.right])
+        if self.right == 3:
+            self.right = 0
+        else:
+            self.right += 1
+        if x + 10 < self.left + self.cell_size * 6.5:
+            return [x + 5, y]
+        return [x, y]
+
+def load_image(name, colorkey=None):
+    fullname = os.path.join('animation', name)
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    image = pygame.image.load(fullname)
+    if colorkey is not None:
+        image = image.convert()
+        if colorkey == -1:
+            colorkey = image.get_at((0, 0))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    return image
 
 
+size = width, height = 800, 800
+screen = pygame.display.set_mode(size)
+board = Board(8, 6)
+all_sprites = pygame.sprite.Group()
+sprite = pygame.sprite.Sprite()
+sprite.image = load_image("down-stand.png")
+sprite.rect = sprite.image.get_rect()
+all_sprites.add(sprite)
+sprite.rect = [200, 200]
+screen.fill((255, 255, 255))
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('Уровень 1. Спальня')
-    size = width, height = 800, 800
-    screen = pygame.display.set_mode(size)
-    board = Board(8, 6)
     running = True
     screen.fill((0, 0, 0))
     board.render(screen)
@@ -96,16 +164,18 @@ if __name__ == '__main__':
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == 119:
-                    hero.moving('w')
-                elif event.key == 97:
-                    hero.moving('a')
-                elif event.key == 115:
-                    hero.moving('s')
-                elif event.key == 100:
-                    hero.moving('d')
-                screen.fill((0, 0, 0))
-                board.render(screen)
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_w]:
+                sprite.rect = hero.moving_up(sprite.rect[0], sprite.rect[1])
+            elif keys[pygame.K_a]:
+                sprite.rect = hero.moving_left(sprite.rect[0], sprite.rect[1])
+            elif keys[pygame.K_d]:
+                sprite.rect = hero.moving_right(sprite.rect[0], sprite.rect[1])
+            elif keys[pygame.K_s]:
+                sprite.rect = hero.moving_down(sprite.rect[0], sprite.rect[1])
+            else:
                 hero.drawing()
-        pygame.display.flip()
+            screen.fill((0, 0, 0))
+            board.render(screen)
+            all_sprites.draw(screen)
+            pygame.display.flip()
