@@ -181,6 +181,12 @@ plant.image = pygame.transform.scale(plant.image, (80, 120))
 plant.rect = plant.image.get_rect()
 plant.rect = [553, 539]
 all_sprites.add(plant)
+chair = pygame.sprite.Sprite()
+chair.image = load_image('chair.png', (0, 0, 0))
+chair.image = pygame.transform.scale(chair.image, (70, 120))
+chair.rect = chair.image.get_rect()
+chair.rect = [250, 500]
+all_sprites.add(chair)
 table = pygame.sprite.Sprite()
 table.image = load_image('table.png', (0, 0, 0))
 table.image = pygame.transform.scale(table.image, (180, 130))
