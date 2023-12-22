@@ -41,8 +41,6 @@ class Board:
         line1 = font.render("10010010", True, (200, 255, 100))
         lx1 = self.left + 5.5 * self.cell_size + 10
         ly1 = 155
-        lh = 15
-        lw = 15
         screen.blit(line1, (lx1, ly1))
         line2 = font.render("00101001", True, (200, 255, 250))
         screen.blit(line2, (lx1, ly1 + 20))
@@ -56,7 +54,6 @@ class Hero:
         self.left = 150
         self.top = 250
         self.cell_size = 60
-        # героя на норм картинку поменяем позже
         self.hero = [[self.left, self.top + 120], [60, 120]]
         self.animation = {'up': ['up-walk-2.png', 'up-stand.png', 'up-walk-1.png', 'up-stand.png'],
                           'down': ['down-walk-2.png', 'down-stand.png', 'down-walk-1.png', 'down-stand.png'],
@@ -67,7 +64,10 @@ class Hero:
         self.down = 1
         self.toleft = 1
         self.right = 1
-        self.IMPORT_COORDS = [self.left, self.top, self.left + self.cell_size, self.top + 2 * self.cell_size] #коробка, кровать, стол
+        self.health_per = 100
+        self.happy_per = 100
+        self.move = {'up': [(0, -7), self.up], 'down': [(0, 7), self.down],
+                     'left': [(-7, 0), self.toleft], 'right': [(7, 0), self.right]}
 
     def get_rect(self, x, y):
         one = (x - self.top) // self.cell_size
@@ -78,49 +78,29 @@ class Hero:
         sprite.image = load_image(self.animation[self.direction][1])
         all_sprites.draw(screen)
 
-    def moving_up(self, x, y):
-        self.direction = 'up'
-        sprite.image = load_image(self.animation['up'][self.up])
-        if self.up == 3:
-            self.up = 0
-        else:
-            self.up += 1
-        if y - 5 > self.top - 50:
-            return [x, y - 5]
-        return [x, y]
-#переписать движение в одну функцию
-    def moving_down(self, x, y):
-        self.direction = 'down'
-        sprite.image = load_image(self.animation['down'][self.down])
-        if self.down == 3:
-            self.down = 0
-        else:
-            self.down += 1
-        if y <= self.top + self.cell_size * 5 - 30:
-            return [x, y + 5]
-        return [x, y]
+    def life(self):
+        font = pygame.font.Font(None, 35)
+        health_line = font.render(f"{self.health_per}%", True, (0, 0, 0))
+        screen.blit(health_line, (80, 20))
+        self.health_per = round((self.health_per * 100 - 2) / 100, 2)
+        happy_line = font.render(f"{self.happy_per}%", True, (0, 0, 0))
+        screen.blit(happy_line, (80, 80))
+        self.happy_per = round((self.health_per * 100 - 2) / 100, 2)
+        return (self.happy_per, self.health_per)
 
-    def moving_left(self, x, y):
-        self.direction = 'left'
-        sprite.image = load_image(self.animation['left'][self.toleft])
-        if self.toleft == 3:
-            self.toleft = 0
+    def moving(self, x, y, direction):
+        self.life()
+        self.direction = direction
+        sprite.image = load_image(self.animation[direction][self.move[direction][1]])
+        if self.move[direction][1] == 3:
+            self.move[direction][1] = 0
         else:
-            self.toleft += 1
-        if x - 5 > self.left:
-            return [x - 5, y]
-        return [x, y]
+            self.move[direction][1] += 1
+        if self.left + self.cell_size * 6.4 - 2 > x + self.move[direction][0][0] > self.left and self.top - 50 < y + self.move[direction][0][1] < self.top + self.cell_size * 5 - 30:
+            return [x + self.move[direction][0][0], y + self.move[direction][0][1]]
+        else:
+            return [x, y]
 
-    def moving_right(self, x, y):
-        self.direction = 'right'
-        sprite.image = load_image(self.animation['right'][self.right])
-        if self.right == 3:
-            self.right = 0
-        else:
-            self.right += 1
-        if x + 10 < self.left + self.cell_size * 6.5:
-            return [x + 5, y]
-        return [x, y]
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('animation', name)
@@ -144,23 +124,6 @@ size = width, height = 800, 800
 screen = pygame.display.set_mode(size)
 board = Board(8, 6)
 all_sprites = pygame.sprite.Group()
-bed = pygame.sprite.Sprite()
-bed.image = load_image('bed.png', (32, 30, 41))
-bed.image = pygame.transform.scale(bed.image, (300, 300))
-bed.rect = bed.image.get_rect()
-all_sprites.add(bed)
-bed.rect = [380, 200]
-box_sp = pygame.sprite.Sprite()
-box_sp.image = load_image("box-c.png")
-box_sp.image = pygame.transform.scale(box_sp.image, (150, 120))
-box_sp.rect = box_sp.image.get_rect()
-all_sprites.add(box_sp)
-box_sp.rect = [130, 250]
-sprite = pygame.sprite.Sprite()
-sprite.image = load_image("down-stand.png")
-sprite.rect = sprite.image.get_rect()
-sprite.rect = [300, 300]
-all_sprites.add(sprite)
 door_open = pygame.sprite.Group()
 d_open = pygame.sprite.Sprite()
 d_open.image = load_image("open-door.png", (166, 172, 186))
@@ -175,24 +138,26 @@ d_closed.image = pygame.transform.scale(d_closed.image, (90, 150))
 d_closed.rect = d_closed.image.get_rect()
 d_closed.rect = [350, 150]
 door_closed.add(d_closed)
-plant = pygame.sprite.Sprite()
-plant.image = load_image('plant.png', (0, 0, 0))
-plant.image = pygame.transform.scale(plant.image, (80, 120))
-plant.rect = plant.image.get_rect()
-plant.rect = [553, 539]
-all_sprites.add(plant)
-chair = pygame.sprite.Sprite()
-chair.image = load_image('chair.png', (0, 0, 0))
-chair.image = pygame.transform.scale(chair.image, (70, 120))
-chair.rect = chair.image.get_rect()
-chair.rect = [250, 500]
-all_sprites.add(chair)
-table = pygame.sprite.Sprite()
-table.image = load_image('table.png', (0, 0, 0))
-table.image = pygame.transform.scale(table.image, (180, 130))
-table.rect = table.image.get_rect()
-table.rect = [200, 527]
-all_sprites.add(table)
+
+
+time = 0
+clock = pygame.time.Clock()
+
+bed = pygame.sprite.Sprite()
+box_c, sprite, plant, trash, chair, table = pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite()
+health, happiness = pygame.sprite.Sprite(), pygame.sprite.Sprite()
+sprites = {'bed': ((32, 30, 41), bed, (300, 300), [380, 200]), 'box-c': (None, box_c, (150, 120), [130, 250]),
+           'down-stand': (None, sprite, None, [300, 300]), 'plant': ((0, 0, 0), plant, (80, 120), [553, 539]),
+           'trash': ((0, 0, 0), trash, (50, 60), [150, 590]), 'chair': ((0, 0, 0), chair, (70, 120), [250, 500]),
+           'table': ((0, 0, 0), table, (180, 130), [200, 527]), 'health': ((255, 255, 255), health, (100, 90), [-10,-15]),
+           'happiness': ((255, 255, 255), happiness, (55, 50), [10, 60])}
+for i in sprites:
+    sprites[i][1].image = load_image(i + '.png', sprites[i][0])
+    if sprites[i][2]:
+        sprites[i][1].image = pygame.transform.scale(sprites[i][1].image, sprites[i][2])
+    sprites[i][1].rect = sprites[i][1].image.get_rect()
+    sprites[i][1].rect = sprites[i][3]
+    all_sprites.add(sprites[i][1])
 if __name__ == '__main__':
     pygame.init()
     pygame.display.set_caption('Уровень 1. Спальня')
@@ -200,23 +165,24 @@ if __name__ == '__main__':
     screen.fill((0, 0, 0))
     board.render(screen)
     hero = Hero()
-    hero.drawing()
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             keys = pygame.key.get_pressed()
             if keys[pygame.K_w]:
-                sprite.rect = hero.moving_up(sprite.rect[0], sprite.rect[1])
+                sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'up')
             elif keys[pygame.K_a]:
-                sprite.rect = hero.moving_left(sprite.rect[0], sprite.rect[1])
+                sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'left')
             elif keys[pygame.K_d]:
-                sprite.rect = hero.moving_right(sprite.rect[0], sprite.rect[1])
+                sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'right')
             elif keys[pygame.K_s]:
-                sprite.rect = hero.moving_down(sprite.rect[0], sprite.rect[1])
+                sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'down')
             else:
                 hero.drawing()
             screen.fill((255, 160, 122))
+            time += clock.tick() / 1000
             board.render(screen)
+            hero.life()
             all_sprites.draw(screen)
             pygame.display.flip()
