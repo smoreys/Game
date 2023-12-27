@@ -33,7 +33,7 @@ class Board:
                 pygame.draw.rect(screen, x, (self.cell_size * j + self.left,
                                                                       self.cell_size * i + self.top, self.cell_size,
                                                                       self.cell_size), 2)
-        #текст на картине + сама картинаs
+        #текст на картине + сама картина
         pygame.draw.rect(screen, x, (self.left, self.top - 170, 480, 170), 4) #стена с дверью
         pygame.draw.rect(screen, pygame.Color(255, 182, 193), (self.left + 5.5 * self.cell_size, 150, 130, 72))
         pygame.draw.rect(screen, pygame.Color(219, 112, 147), (self.left + 5.5 * self.cell_size, 150, 130, 72), 5)
@@ -46,11 +46,15 @@ class Board:
         screen.blit(line2, (lx1, ly1 + 20))
         line3 = font.render("10100101", True, (250, 255, 100))
         screen.blit(line3, (lx1, ly1 + 40))
+        coords = (400, 10, 70, 70) #рисуем инвентарные коробки
+        for i in range(5):
+            pygame.draw.rect(screen, pygame.Color(255, 0, 122), (coords[0] + i * 65, coords[1], coords[2], coords[3]), 5)
         #магия отменяется, дев нашел спрайты
 
 
 class Hero:
     def __init__(self):
+        self.stuff = []
         self.left = 150
         self.top = 250
         self.cell_size = 60
@@ -66,8 +70,11 @@ class Hero:
         self.right = 1
         self.health_per = 100
         self.happy_per = 100
+        self.IMPORTANT_COORDS = [(5, 2), (2.5, 4.75), ()]
         self.move = {'up': [(0, -7), self.up], 'down': [(0, 7), self.down],
                      'left': [(-7, 0), self.toleft], 'right': [(7, 0), self.right]}
+        self.sleep = 0
+        self.sleep_animation = ['sleep_1.png', 'sleeping-2.png', 'sleeping-3.png']
 
     def get_rect(self, x, y):
         one = (x - self.top) // self.cell_size
@@ -85,21 +92,49 @@ class Hero:
         self.health_per = round((self.health_per * 100 - 2) / 100, 2)
         happy_line = font.render(f"{self.happy_per}%", True, (0, 0, 0))
         screen.blit(happy_line, (80, 80))
-        self.happy_per = round((self.health_per * 100 - 2) / 100, 2)
+        self.happy_per = round((self.happy_per * 100 - 2) / 100, 2)
         return (self.happy_per, self.health_per)
 
     def moving(self, x, y, direction):
         self.life()
         self.direction = direction
         sprite.image = load_image(self.animation[direction][self.move[direction][1]])
+        new_x = x + self.move[direction][0][0]
+        new_y = y + self.move[direction][0][1]
+        rect_x, rect_y = self.get_rect(new_x, new_y)
         if self.move[direction][1] == 3:
             self.move[direction][1] = 0
         else:
             self.move[direction][1] += 1
-        if self.left + self.cell_size * 6.4 - 2 > x + self.move[direction][0][0] > self.left and self.top - 50 < y + self.move[direction][0][1] < self.top + self.cell_size * 5 - 30:
-            return [x + self.move[direction][0][0], y + self.move[direction][0][1]]
+        if self.left + self.cell_size * 6.4 - 2 > new_x > self.left and self.top - 50 < new_y < self.top + self.cell_size * 5 - 30:
+            if (rect_x < 0 and rect_y <= 1 or (rect_x == -1 or rect_x == -2 or rect_x == 0) and (rect_y == 6 or rect_y == 5)
+                    or rect_x == 2 and (rect_y == 0 or rect_y == 1 or rect_y == 2)) or rect_y == 2 and (rect_x == 4 or rect_x == 3):
+                return [x, y]
+            else:
+                return [new_x, new_y]
         else:
             return [x, y]
+
+    def sp_animation(self, x, y):
+        if x == 500 and y == 250:
+            sprite.image = load_image(self.sleep_animation[self.sleep])
+            if self.health_per < 99:
+                self.health_per += 1
+        if self.sleep == 2:
+            self.sleep = 0
+        else:
+            self.sleep += 1
+
+    def sleep_play(self, x, y, sleep_play):
+        rect_x, rect_y = self.get_rect(x, y)
+        if sleep_play:
+            if rect_x == 1 and (rect_y in (1, 2, 3)) or rect_y == 3 and (rect_x in (1, 2, 3, 4)):
+                sprite.image = load_image(self.sleep_animation[self.sleep])
+                return [500, 250], True
+            else:
+                return [x, y], False
+        else:
+            return [300, 350], False
 
 
 def load_image(name, colorkey=None):
@@ -142,7 +177,6 @@ door_closed.add(d_closed)
 
 time = 0
 clock = pygame.time.Clock()
-
 bed = pygame.sprite.Sprite()
 box_c, sprite, plant, trash, chair, table = pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite(), pygame.sprite.Sprite()
 health, happiness = pygame.sprite.Sprite(), pygame.sprite.Sprite()
@@ -178,11 +212,22 @@ if __name__ == '__main__':
                 sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'right')
             elif keys[pygame.K_s]:
                 sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'down')
+            elif keys[pygame.K_e]:
+                sprite.rect, sleep_play = hero.sleep_play(sprite.rect[0], sprite.rect[1], True)
             else:
                 hero.drawing()
+            try:
+                print(sleep_play)
+                if sleep_play:
+                    hero.sp_animation(sprite.rect[0], sprite.rect[1])
+            except:
+                pass
             screen.fill((255, 160, 122))
-            time += clock.tick() / 1000
+            time = clock.tick() / 500
+            health, happiness = hero.life()
+            if happiness < 1 or health < 1:
+                pass
+                #running = False
             board.render(screen)
-            hero.life()
             all_sprites.draw(screen)
             pygame.display.flip()
