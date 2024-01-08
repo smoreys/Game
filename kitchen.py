@@ -214,9 +214,6 @@ def runkitchen(tf=False):
                 line2 = font.render(str(cuboc_counter), True, (255, 255, 255))
                 screen.blit(line2, (x, y))
                 pygame.display.flip()
-                print(tf)
                 if tf:
-                    final(True)
-        return False
-
-runkitchen(True)
+                    return True
+        return True
