@@ -28,7 +28,7 @@ def final(tf=False):
                             (random.random() * width,
                              random.random() * height, 1, 1))
 
-        if __name__ == '__main__':
+        if True:
             pygame.init()
             size = width, height = 800, 800
             screen = pygame.display.set_mode(size)
