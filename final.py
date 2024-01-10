@@ -8,7 +8,7 @@ b = 0
 clock = pygame.time.Clock()
 
 def final(tf=False):
-    if tf:
+    if True:
         def draw(screen):
             screen.fill((0, 0, 0))
             font = pygame.font.Font(None, 60)
@@ -39,5 +39,6 @@ def final(tf=False):
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
+                        return False
             pygame.quit()
             return False
