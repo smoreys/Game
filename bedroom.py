@@ -214,6 +214,7 @@ def runbedroom(flag=False):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                    return False
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_w]:
                     sprite.rect = hero.moving(sprite.rect[0], sprite.rect[1], 'up')
