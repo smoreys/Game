@@ -39,6 +39,7 @@ def start():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                    return False
                 if event.type == pygame.KEYDOWN:
                     return True
                 else:
