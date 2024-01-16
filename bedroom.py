@@ -239,4 +239,4 @@ def runbedroom(flag=False):
                 pygame.display.flip()
                 if tf:
                     return True
-        return True
+    return False
